@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.owleyes.moustache.CustomRelativeLayout 
+	xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:id="@+id/root_layout"
+    >
+    <ImageView
+   		android:layout_width="wrap_content"
+   		android:layout_height="wrap_content"
+   		android:id="@+id/image"
+   		android:adjustViewBounds="true"
+   		android:gravity="center"
+   		android:layout_alignParentTop="true"
+   		android:layout_marginTop="20px"
+   		android:layout_centerInParent="true"
+   		
+   		/>
+ <!-- 
+<HorizontalScrollView  
+    android:layout_width="wrap_content" 
+    android:layout_height="100px" 
+    android:scrollbars="none"
+    android:focusable="false"
+    android:background="#FFFFFF"
+    android:id="@+id/scroll"
+    android:layout_alignParentBottom="true"
+    >
+     
+    <LinearLayout
+    	android:layout_width="wrap_content"
+        android:layout_height="fill_parent"
+        android:orientation="horizontal"
+        android:focusable="false"
+        android:background="#FFFFFF"
+        android:gravity="center"
+        android:id="@+id/group">
+     -->   
+        <!-- 
+        
+         -->
+        <!-- 
+    <ImageView
+   		android:layout_width="wrap_content"
+   		android:layout_height="fill_parent"
+   		android:id="@+id/image2"
+   		
+   		/>
+   		 -->
+   <!-- 
+
+   		<ListView
+    	android:layout_width="fill_parent"
+    	android:layout_height="200px"
+    	android:id="@+id/list"
+    	>
+    </ListView>
+     -->
+     <!-- 
+     </LinearLayout>
+     </HorizontalScrollView>
+      -->     
+</com.owleyes.moustache.CustomRelativeLayout>
