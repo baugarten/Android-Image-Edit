@@ -1,8 +1,10 @@
 package com.owleyes.moustache;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Point;
 import android.util.Log;
+import android.view.Display;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -10,7 +12,8 @@ import android.view.GestureDetector.SimpleOnGestureListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 
-public class CustomHorizontalScrollView extends HorizontalScrollView {
+public class CustomHorizontalScrollView extends
+    HorizontalScrollView {
   private static final int threshold = 75;
   private boolean mScroll = false;
 
@@ -24,9 +27,18 @@ public class CustomHorizontalScrollView extends HorizontalScrollView {
   private LinearLayout ll = null;
   private CustomRelativeLayout rl = null;
 
+  private int _width;
+  private int _height;
+
   public CustomHorizontalScrollView(Context context) {
     super(context);
-    gestureDetector = new GestureDetector(new YScrollDetector());
+
+    Display display = ((Activity) context)
+        .getWindowManager().getDefaultDisplay();
+    _width = display.getWidth();
+    _height = display.getHeight();
+    gestureDetector = new GestureDetector(
+        new YScrollDetector());
   }
 
   @Override
@@ -42,67 +54,74 @@ public class CustomHorizontalScrollView extends HorizontalScrollView {
      * TODO(baugarten): Clean up the dragging code
      */
     switch (ev.getAction()) {
-    case MotionEvent.ACTION_DOWN:
-      Log.e("DOWN", "ACTION_DOWN");
-      if (ll == null) {
-        ll = (LinearLayout) this.getChildAt(0);
-      }
-      initial = new Point();
-      initial.x = (int) ev.getX();
-      initial.y = (int) ev.getY();
-      for (int i = 0; i < ll.getChildCount(); i += 1) {
-        View v = ll.getChildAt(i);
-        if (initial.x > v.getLeft() - this.getScrollX()
-            && initial.x < v.getLeft() - this.getScrollX()
-                + v.getWidth()) {
-          Log.e("HEEEELLO", "Found the fucking child");
-          dragging = (CustomImageView) v;
+      case MotionEvent.ACTION_DOWN:
+        Log.e("DOWN", "ACTION_DOWN");
+        if (ll == null) {
+          ll = (LinearLayout) this.getChildAt(0);
         }
-      }
-      super.onTouchEvent(ev);
-      return true;
-    case MotionEvent.ACTION_MOVE:
-      if (mScroll) {
-        Log.e("Moving", "Move the fucking moustache");
-        dragging.onTouchEvent(ev);
-        if (rl != null)
-          rl.invalidate();
-      } else if (Math.abs(ev.getY() - initial.y) > threshold) {
-        try {
-          rl = ((CustomRelativeLayout) this.getParent());
+        initial = new Point();
+        initial.x = (int) ev.getX();
+        initial.y = (int) ev.getY();
+        for (int i = 0; i < ll.getChildCount(); i += 1) {
+          View v = ll.getChildAt(i);
+          if (initial.x > v.getLeft() - this.getScrollX()
+              && initial.x < v.getLeft()
+                  - this.getScrollX() + v.getWidth()) {
+            Log.e("HEEEELLO", "Found the fucking child");
+            dragging = (CustomImageView) v;
+          }
+        }
+        super.onTouchEvent(ev);
+        return true;
+      case MotionEvent.ACTION_MOVE:
+        if (mScroll) {
+          Log.e("Moving", "Move the fucking moustache");
+          dragging.onTouchEvent(ev);
 
-          CustomImageView civ = new CustomImageView(getContext());
-          civ.setLayoutParams(new LayoutParams(
-              LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-          civ.setImageDrawable(dragging.getDrawable());
-          rl.addView(civ);
-          dragging = civ;
-          rl.setDragging(dragging);
-          rl.invalidate();
-          mScroll = true;
-          return false;
+          if (rl != null) {
+            rl.invalidate();
+          }
+          return true;
+        } else if (Math.abs(ev.getY() - initial.y) > threshold) {
+          try {
+            rl = ((CustomRelativeLayout) this.getParent());
+
+            CustomImageView civ = new CustomImageView(
+                getContext());
+            civ.setScreenBounds(_width, _height
+                - this.getHeight());
+            civ.setLayoutParams(new LayoutParams(
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT));
+            civ.setImageDrawable(dragging.getDrawable());
+            rl.addView(civ);
+            dragging = civ;
+            rl.setDragging(dragging);
+            rl.invalidate();
+            mScroll = true;
+            return false;
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        } else {
+          super.onTouchEvent(ev);
+        }
+        return true;
+      case MotionEvent.ACTION_OUTSIDE:
+        Log.e("OMGOMGOMGOMG", "OUTSIDE THE FUCKING SHIT");
+        mScroll = true;
+        return true;
+      case MotionEvent.ACTION_UP:
+        Log.e("UP", "GET HER UP");
+        try {
+          ((CustomImageView) dragging).onTouchEvent(ev);
+          mScroll = false;
+          dragging = null;
         } catch (Exception e) {
           e.printStackTrace();
         }
-      } else {
         super.onTouchEvent(ev);
-      }
-      return true;
-    case MotionEvent.ACTION_OUTSIDE:
-      Log.e("OMGOMGOMGOMG", "OUTSIDE THE FUCKING SHIT");
-      mScroll = true;
-      return true;
-    case MotionEvent.ACTION_UP:
-      Log.e("UP", "GET HER UP");
-      try {
-        // ((CustomImageView)dragging).restore(location[0], location[1]);
-        mScroll = false;
-        dragging = null;
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-      super.onTouchEvent(ev);
-      return false;
+        return false;
     }
     return false;
   }

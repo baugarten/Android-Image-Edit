@@ -2,13 +2,16 @@ package com.owleyes.moustache;
 
 import android.content.Context;
 import android.graphics.Point;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 
 public class CustomImageView extends ImageView {
   private boolean pressed = false;
   private Point coords = new Point();
+
+  private int _width;
+  private int _height;
 
   /**
    * A new CustomImageView with context CONTEXT.
@@ -24,10 +27,14 @@ public class CustomImageView extends ImageView {
    */
   public void restore(int x, int y) {
     this.layout(x - this.getWidth() / 2, y
-        - this.getHeight() / 2, x
-        + this.getWidth() / 2, y
+        - this.getHeight() / 2, x + this.getWidth() / 2, y
         + this.getHeight() / 2);
 
+  }
+
+  public void setScreenBounds(int width, int height) {
+    _width = width;
+    _height = height;
   }
 
   @Override
@@ -43,24 +50,23 @@ public class CustomImageView extends ImageView {
         coords.y = (int) event.getY();
         break;
       case MotionEvent.ACTION_MOVE:
+        Log.e("MOVING", "IN the right class");
         coords.x = (int) event.getX();
-        coords.y = (int) event.getY();
+        coords.y = _height + (int) event.getY();
 
-        this.layout(coords.x - this.getWidth()
-            / 2, coords.y - this.getHeight(),
-            coords.x + this.getWidth() / 2,
-            coords.y + this.getHeight() / 2);
-        ((RelativeLayout) this.getParent())
-            .invalidate();
-        return true;
+        this.layout(coords.x - (this.getWidth()), coords.y
+            - (this.getHeight()), coords.x, coords.y);
+        break;
       case MotionEvent.ACTION_UP:
-
+        System.out.println(this.getLeft() + " "
+            + this.getRight() + " " + this.getTop() + " "
+            + this.getBottom());
         break;
       case MotionEvent.ACTION_OUTSIDE:
 
         break;
     }
-    return super.onTouchEvent(event);
+    invalidate();
+    return true;
   }
-
 }
