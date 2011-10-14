@@ -214,12 +214,12 @@ public class Viewer extends Activity {
           .getInt(ExifDirectory.TAG_ORIENTATION);
       Log.e("ORIENTATION", orientation + " " + (orientation == 6));
       switch (orientation) {
-      case 6:
-        return 90;
-      case 8:
-        return 270;
-      default:
-        return 0;
+        case 6:
+          return 90;
+        case 8:
+          return 270;
+        default:
+          return 0;
 
       }
     } catch (JpegProcessingException e1) {

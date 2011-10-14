@@ -12,8 +12,7 @@ import android.view.GestureDetector.SimpleOnGestureListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 
-public class CustomHorizontalScrollView extends
-    HorizontalScrollView {
+public class CustomHorizontalScrollView extends HorizontalScrollView {
   private static final int threshold = 75;
   private boolean mScroll = false;
 
@@ -29,16 +28,16 @@ public class CustomHorizontalScrollView extends
 
   private int _width;
   private int _height;
+  private boolean fix;
 
   public CustomHorizontalScrollView(Context context) {
     super(context);
 
-    Display display = ((Activity) context)
-        .getWindowManager().getDefaultDisplay();
+    Display display = ((Activity) context).getWindowManager()
+        .getDefaultDisplay();
     _width = display.getWidth();
     _height = display.getHeight();
-    gestureDetector = new GestureDetector(
-        new YScrollDetector());
+    gestureDetector = new GestureDetector(new YScrollDetector());
   }
 
   @Override
@@ -65,9 +64,10 @@ public class CustomHorizontalScrollView extends
         for (int i = 0; i < ll.getChildCount(); i += 1) {
           View v = ll.getChildAt(i);
           if (initial.x > v.getLeft() - this.getScrollX()
-              && initial.x < v.getLeft()
-                  - this.getScrollX() + v.getWidth()) {
-            Log.e("HEEEELLO", "Found the fucking child");
+              && initial.x < v.getLeft() - this.getScrollX()
+                  + v.getWidth()) {
+
+            Log.e("HEEEELLO", "Found the fucking child " + dragging);
             dragging = (CustomImageView) v;
           }
         }
@@ -75,52 +75,46 @@ public class CustomHorizontalScrollView extends
         return true;
       case MotionEvent.ACTION_MOVE:
         if (mScroll) {
-          Log.e("Moving", "Move the fucking moustache");
           dragging.onTouchEvent(ev);
 
-          if (rl != null) {
-            rl.invalidate();
-          }
-          return true;
         } else if (Math.abs(ev.getY() - initial.y) > threshold) {
-          try {
-            rl = ((CustomRelativeLayout) this.getParent());
+          Log.e("Adding", "Adding child to stage");
+          mScroll = true;
 
-            CustomImageView civ = new CustomImageView(
-                getContext());
-            civ.setScreenBounds(_width, _height
-                - this.getHeight());
-            civ.setLayoutParams(new LayoutParams(
-                LayoutParams.WRAP_CONTENT,
-                LayoutParams.WRAP_CONTENT));
-            civ.setImageDrawable(dragging.getDrawable());
-            rl.addView(civ);
-            dragging = civ;
-            rl.setDragging(dragging);
-            rl.invalidate();
-            mScroll = true;
-            return false;
-          } catch (Exception e) {
-            e.printStackTrace();
+          rl = ((CustomRelativeLayout) this.getParent());
+          CustomImageView civ = new CustomImageView(getContext());
+
+          civ.setLayoutParams(new LayoutParams(
+              LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+
+          civ.setImageDrawable(dragging.getDrawable());
+          rl.addView(civ);
+          dragging = civ;
+          rl.setDragging(dragging);
+          for (int i = 0; i < rl.getChildCount(); i++) {
+            Log.e("Child " + i, rl.getChildAt(i).getLeft() + " "
+                + rl.getChildAt(i).getTop());
           }
+          rl.requestLayout();
+          // fix = true;
+          return true;
         } else {
           super.onTouchEvent(ev);
         }
         return true;
+
       case MotionEvent.ACTION_OUTSIDE:
-        Log.e("OMGOMGOMGOMG", "OUTSIDE THE FUCKING SHIT");
         mScroll = true;
         return true;
+
       case MotionEvent.ACTION_UP:
         Log.e("UP", "GET HER UP");
-        try {
-          ((CustomImageView) dragging).onTouchEvent(ev);
-          mScroll = false;
-          dragging = null;
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
+        ((CustomImageView) dragging).onTouchEvent(ev);
+        mScroll = false;
+        dragging = null;
+
         super.onTouchEvent(ev);
+
         return false;
     }
     return false;
