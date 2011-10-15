@@ -12,10 +12,13 @@ import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 import android.widget.RelativeLayout.LayoutParams;
 
 import com.drew.imaging.jpeg.JpegMetadataReader;
@@ -49,12 +52,16 @@ public class Viewer extends Activity {
   /** The RelativeLayout for the Scrollbar. */
   private CustomRelativeLayout rl;
 
+  /** The remove button. */
+  private Button _remove;
+
+  private Button _save;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
     setContentView(R.layout.nothing);
-    Log.e("CREATE", "Creating");
 
     // Inflate all the views.
     init();
@@ -120,11 +127,46 @@ public class Viewer extends Activity {
 
     iv = new ImageView(this);
     iv.setLayoutParams(wrap);
+    // iv.setId(1);
     rl.addView(iv);
+    rl.setEditable(iv);
+
+    _remove = new Button(this);
+    LayoutParams removeLP = new LayoutParams(
+        LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    removeLP.addRule(RelativeLayout.ABOVE, 1);
+    _remove.setLayoutParams(removeLP);
+    _remove.setText("Remove");
+    _remove.setId(2);
+    _remove.setOnClickListener(new OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        rl.removeView(rl.getSelectedImage());
+      }
+
+    });
+    rl.addView(_remove);
+
+    _save = new Button(this);
+    LayoutParams saveLP = new LayoutParams(LayoutParams.WRAP_CONTENT,
+        LayoutParams.WRAP_CONTENT);
+    saveLP.addRule(RelativeLayout.ABOVE, 1);
+    saveLP.addRule(RelativeLayout.ALIGN_RIGHT, 1);
+    _save.setLayoutParams(saveLP);
+    _save.setText("Save");
+    _save.setOnClickListener(new OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        Toast.makeText(Viewer.this.getApplicationContext(),
+            "Saving not yet implemented", 1000).show();
+      }
+    });
+    rl.addView(_save);
 
     vg = new LinearLayout(this);
-    hsv = new CustomHorizontalScrollView(this);
 
+    hsv = new CustomHorizontalScrollView(this);
+    hsv.setId(1);
     LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT,
         LayoutParams.WRAP_CONTENT);
     lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
@@ -145,7 +187,6 @@ public class Viewer extends Activity {
   @Override
   protected void onPause() {
     super.onPause();
-    Log.e("Pause", "Pausing");
     iv = null;
     vg = null;
   }
@@ -180,13 +221,11 @@ public class Viewer extends Activity {
       resultBmp = Bitmap.createScaledBitmap(b, w, h, true);
       b.recycle();
       b = null;
-      Log.e("Not Rotates", "Just scale it");
       // If rotated, scale it by switching width and height and then rotated it
     } else {
       Bitmap scaledBmp = Bitmap.createScaledBitmap(b, w, h, true);
       b.recycle();
       b = null;
-      Log.e("Rotated", "Switch it, Bitch");
       Matrix mat = new Matrix();
       mat.postRotate(degree);
       resultBmp = Bitmap.createBitmap(scaledBmp, 0, 0, w, h, mat,
@@ -212,7 +251,6 @@ public class Viewer extends Activity {
           .getDirectory(ExifDirectory.class);
       int orientation = exifDirectory
           .getInt(ExifDirectory.TAG_ORIENTATION);
-      Log.e("ORIENTATION", orientation + " " + (orientation == 6));
       switch (orientation) {
         case 6:
           return 90;

@@ -28,7 +28,6 @@ public class Main extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-    Log.e("RESUME", "resume activity");
     if (imageUri != null) {
       Intent viewActivity = new Intent(this, Viewer.class);
       viewActivity.putExtra("image", imageUri);
@@ -53,12 +52,9 @@ public class Main extends Activity {
       Intent data) {
 
     super.onActivityResult(requestCode, resultCode, data);
-    Log.d("RESULT CODE", resultCode + "");
 
     if (resultCode == Activity.RESULT_OK) {
-      Log.d("result", "ok");
       imageUri = data.getData();
-      Log.d("result", "Should've started that activity...");
     } else
       Log.e("result", "BAD");
   }
