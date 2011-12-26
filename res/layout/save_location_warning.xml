@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent">
+    <TextView
+      android:id="@+id/warning_text"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:textSize="18sp"
+      android:text="Warning: your pictures will automatically \
+be saved to external storage. Otherwise, they won't appear in \
+your image gallery. If you want to change this setting, please \
+access the settings screen in the menu."
+    />
+    <CheckBox
+        android:id="@+id/ignore_warning"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Don't show this again"
+      />
+</LinearLayout>
