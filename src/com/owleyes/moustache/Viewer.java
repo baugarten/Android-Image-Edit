@@ -26,10 +26,13 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+import android.widget.ToggleButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.RelativeLayout.LayoutParams;
 
 import com.drew.imaging.jpeg.JpegMetadataReader;
@@ -39,11 +42,15 @@ import com.drew.metadata.Metadata;
 import com.drew.metadata.MetadataException;
 import com.drew.metadata.exif.ExifDirectory;
 
-public class Viewer extends Activity {
+public class Viewer extends Activity implements OnCheckedChangeListener {
 
     private static final String SEE_WARNING = "warning";
 
     private static final String CHECKED = "ignored_warning";
+
+    private static final int SCALE = 0;
+
+    private static final int ROTATE = 1;
 
     /** The list of drawable resource ids. */
     private static final int[] imageList = { R.drawable.one, R.drawable.two, R.drawable.three, R.drawable.four, R.drawable.five, R.drawable.six, R.drawable.seven, R.drawable.eight, R.drawable.nine,
@@ -73,12 +80,21 @@ public class Viewer extends Activity {
     /** Shared Preferences for this app. */
     private SharedPreferences _preferences;
 
-    private SaveHelper saver_;
+    /** An instance of SaveHelper I use to save images. */
+    private SaveHelper _saver;
+
+    private ToggleButton _mode;
+
+    private Button _minus;
+
+    private Button _plus;
+
+    private int _state;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        saver_ = new SaveHelper(this);
+        _saver = new SaveHelper(this);
         _preferences = this.getSharedPreferences(Main.PREFS_FILE, 0);
         setContentView(R.layout.nothing);
 
@@ -162,6 +178,55 @@ public class Viewer extends Activity {
         });
         rl.addView(_remove);
 
+        _minus = new Button(this);
+        LayoutParams minusLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        minusLP.addRule(RelativeLayout.ABOVE, 1);
+        minusLP.addRule(RelativeLayout.LEFT_OF, 10);
+        minusLP.bottomMargin = 6;
+        minusLP.rightMargin = 10;
+        _minus.setBackgroundResource(R.drawable.minus);
+        _minus.setText("");
+        _minus.setLayoutParams(minusLP);
+
+        _minus.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                rl.handleMinusButton(_state);
+            }
+        });
+
+        _plus = new Button(this);
+        LayoutParams plusLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        plusLP.addRule(RelativeLayout.ABOVE, 1);
+        plusLP.addRule(RelativeLayout.RIGHT_OF, 10);
+        plusLP.bottomMargin = 6;
+        plusLP.leftMargin = 10;
+        _plus.setText("");
+        _plus.setBackgroundResource(R.drawable.plus);
+        _plus.setLayoutParams(plusLP);
+        _plus.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                rl.handlePlusButton(_state);
+            }
+        });
+        _mode = new ToggleButton(this);
+        LayoutParams modeLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        modeLP.addRule(RelativeLayout.ABOVE, 1);
+        modeLP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        _mode.setLayoutParams(modeLP);
+        _mode.setTextOn("Scale");
+        _mode.setTextOff("Rotate");
+        _mode.setChecked(true);
+        _mode.setId(10);
+        _mode.setOnCheckedChangeListener(this);
+
+        _state = SCALE;
+        rl.addView(_mode);
+
+        rl.addView(_minus);
+        rl.addView(_plus);
+
         _save = new Button(this);
         LayoutParams saveLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         saveLP.addRule(RelativeLayout.ABOVE, 1);
@@ -173,7 +238,7 @@ public class Viewer extends Activity {
             public void onClick(View v) {
                 rl.setDrawingCacheEnabled(true);
                 final Bitmap b = rl.getDrawingCache();
-                saver_.setBitmap(b);
+                _saver.setBitmap(b);
                 String warning = _preferences.getString(SEE_WARNING, "not_set");
                 FileOutputStream fos = null;
                 Log.e("WHAT!?", warning);
@@ -193,9 +258,9 @@ public class Viewer extends Activity {
                                     edit.putString(SEE_WARNING, CHECKED);
                                     edit.commit();
                                 }
-                                saver_.setOutputStream(new FileOutputStream(Environment.getExternalStorageDirectory() + "/Pictures/image.png"));
-                                saver_.setFilePath(Environment.getExternalStorageDirectory() + "/Pictures/image.jpg");
-                                saver_.save();
+                                _saver.setOutputStream(new FileOutputStream(Environment.getExternalStorageDirectory() + "/Pictures/image.png"));
+                                _saver.setFilePath(Environment.getExternalStorageDirectory() + "/Pictures/image.jpg");
+                                _saver.save();
                             } catch (FileNotFoundException e) {
                                 e.printStackTrace();
                                 Toast.makeText(Viewer.this, "Error writing file, please try again", 1000).show();
@@ -311,5 +376,22 @@ public class Viewer extends Activity {
         }
 
         return 0;
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        // This is the compound button
+        if (isChecked) {
+            /* Scale mode */
+            _minus.setBackgroundResource(R.drawable.minus);
+            _plus.setBackgroundResource(R.drawable.plus);
+            _state = SCALE;
+        } else {
+            /* Rotate mode */
+            _minus.setBackgroundResource(R.drawable.ctr_clk);
+            _plus.setBackgroundResource(R.drawable.clk);
+            _state = ROTATE;
+        }
+
     }
 }
