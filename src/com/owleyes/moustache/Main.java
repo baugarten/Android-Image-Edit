@@ -15,47 +15,49 @@ import android.util.Log;
  */
 public class Main extends Activity {
 
-  /** The URI of the Image to display. */
-  private Uri imageUri;
+    static final String PREFS_FILE = "image_edit";
 
-  /** Called when the activity is first created. */
-  @Override
-  public void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    imageUri = null;
-  }
+    /** The URI of the Image to display. */
+    private Uri imageUri;
 
-  @Override
-  protected void onResume() {
-    super.onResume();
-    if (imageUri != null) {
-      Intent viewActivity = new Intent(this, Viewer.class);
-      viewActivity.putExtra("image", imageUri);
-      startActivity(viewActivity);
-    } else {
-      startActivityForResult(
-          new Intent(
-              Intent.ACTION_PICK,
-              android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI),
-          0);
+    /** Called when the activity is first created. */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        imageUri = null;
     }
-  }
 
-  @Override
-  protected void onPause() {
-    super.onPause();
-    imageUri = null;
-  }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (imageUri != null) {
+            Intent viewActivity = new Intent(this, Viewer.class);
+            viewActivity.putExtra("image", imageUri);
+            startActivity(viewActivity);
+        } else {
+            startActivityForResult(
+                    new Intent(
+                            Intent.ACTION_PICK,
+                            android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI),
+                    0);
+        }
+    }
 
-  @Override
-  public void onActivityResult(int requestCode, int resultCode,
-      Intent data) {
+    @Override
+    protected void onPause() {
+        super.onPause();
+        imageUri = null;
+    }
 
-    super.onActivityResult(requestCode, resultCode, data);
+    @Override
+    public void onActivityResult(int requestCode, int resultCode,
+            Intent data) {
 
-    if (resultCode == Activity.RESULT_OK) {
-      imageUri = data.getData();
-    } else
-      Log.e("result", "BAD");
-  }
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == Activity.RESULT_OK) {
+            imageUri = data.getData();
+        } else
+            Log.e("result", "BAD");
+    }
 }

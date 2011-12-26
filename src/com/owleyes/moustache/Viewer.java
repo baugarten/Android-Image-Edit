@@ -1,9 +1,16 @@
 package com.owleyes.moustache;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -11,10 +18,14 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -30,242 +41,275 @@ import com.drew.metadata.exif.ExifDirectory;
 
 public class Viewer extends Activity {
 
-  /** The list of drawable resource ids. */
-  private static final int[] imageList = { R.drawable.one,
-      R.drawable.two, R.drawable.three, R.drawable.four,
-      R.drawable.five, R.drawable.six, R.drawable.seven,
-      R.drawable.eight, R.drawable.nine, R.drawable.ten,
-      R.drawable.eleven };
+    private static final String SEE_WARNING = "warning";
 
-  /** The Linear Layout that contains all other elements. */
-  private LinearLayout root_layout;
+    private static final String CHECKED = "ignored_warning";
 
-  /** ViewGroup to which we add moustaches. */
-  private LinearLayout vg;
+    /** The list of drawable resource ids. */
+    private static final int[] imageList = { R.drawable.one, R.drawable.two, R.drawable.three, R.drawable.four, R.drawable.five, R.drawable.six, R.drawable.seven, R.drawable.eight, R.drawable.nine,
+            R.drawable.ten, R.drawable.eleven };
 
-  /** The picture being viewed. */
-  private ImageView iv;
+    /** The Linear Layout that contains all other elements. */
+    private LinearLayout root_layout;
 
-  /** The Horizontal Scrollbar we use to display the images we can add. */
-  private CustomHorizontalScrollView hsv;
+    /** ViewGroup to which we add moustaches. */
+    private LinearLayout vg;
 
-  /** The RelativeLayout for the Scrollbar. */
-  private CustomRelativeLayout rl;
+    /** The picture being viewed. */
+    private ImageView iv;
 
-  /** The remove button. */
-  private Button _remove;
+    /** The Horizontal Scrollbar we use to display the images we can add. */
+    private CustomHorizontalScrollView hsv;
 
-  private Button _save;
+    /** The RelativeLayout for the Scrollbar. */
+    private CustomRelativeLayout rl;
 
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+    /** The remove button. */
+    private Button _remove;
 
-    setContentView(R.layout.nothing);
+    /** The save button. */
+    private Button _save;
 
-    // Inflate all the views.
-    init();
+    /** Shared Preferences for this app. */
+    private SharedPreferences _preferences;
 
-    Intent intent = getIntent();
-    Uri imageURI = (Uri) intent.getParcelableExtra("image");
+    private SaveHelper saver_;
 
-    addImage(imageURI);
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        saver_ = new SaveHelper(this);
+        _preferences = this.getSharedPreferences(Main.PREFS_FILE, 0);
+        setContentView(R.layout.nothing);
 
-    addDraggableImages();
+        // Inflate all the views.
+        init();
 
-  }
+        Intent intent = getIntent();
+        Uri imageURI = (Uri) intent.getParcelableExtra("image");
 
-  /**
-   * Populates the LienarLayout VG with the image resources from IMAGELIST.
-   */
-  private void addDraggableImages() {
-    int counter = 0;
-    for (int i : imageList) {
-      CustomImageView temp = new CustomImageView(this);
-      temp.setImageResource(i);
-      temp.setId(counter);
-      counter++;
-      vg.addView(temp, new LayoutParams(LayoutParams.WRAP_CONTENT,
-          LayoutParams.WRAP_CONTENT));
-    }
-  }
+        addImage(imageURI);
 
-  /**
-   * Adds the image specified by the Uri IMAGEURI to the current view.
-   * 
-   */
-  private void addImage(Uri imageURI) {
-    String[] filePathColumn = { MediaStore.Images.Media.DATA };
-    Cursor cursor = getContentResolver().query(imageURI,
-        filePathColumn, null, null, null);
-    cursor.moveToFirst();
+        addDraggableImages();
 
-    int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-    String filePath = cursor.getString(columnIndex);
-    cursor.close();
-
-    iv.setImageBitmap(Viewer.setUpPicture(filePath));
-    iv.invalidate();
-
-  }
-
-  /**
-   * Called by the constructor to set up the views. Because we need to keep
-   * track of a lot of the View elements, its easier for us to inflate each View
-   * in the Class rather than in the XML. This is where that happens.
-   */
-  private void init() {
-    root_layout = (LinearLayout) findViewById(R.id.root);
-
-    rl = new CustomRelativeLayout(this);
-    LayoutParams fill = new LayoutParams(LayoutParams.FILL_PARENT,
-        LayoutParams.FILL_PARENT);
-    LayoutParams wrap = new LayoutParams(LayoutParams.WRAP_CONTENT,
-        LayoutParams.WRAP_CONTENT);
-    rl.setLayoutParams(fill);
-    root_layout.addView(rl);
-
-    iv = new ImageView(this);
-    iv.setLayoutParams(wrap);
-    // iv.setId(1);
-    rl.addView(iv);
-    rl.setEditable(iv);
-
-    _remove = new Button(this);
-    LayoutParams removeLP = new LayoutParams(
-        LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    removeLP.addRule(RelativeLayout.ABOVE, 1);
-    _remove.setLayoutParams(removeLP);
-    _remove.setText("Remove");
-    _remove.setId(2);
-    _remove.setOnClickListener(new OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        rl.removeView(rl.getSelectedImage());
-      }
-
-    });
-    rl.addView(_remove);
-
-    _save = new Button(this);
-    LayoutParams saveLP = new LayoutParams(LayoutParams.WRAP_CONTENT,
-        LayoutParams.WRAP_CONTENT);
-    saveLP.addRule(RelativeLayout.ABOVE, 1);
-    saveLP.addRule(RelativeLayout.ALIGN_RIGHT, 1);
-    _save.setLayoutParams(saveLP);
-    _save.setText("Save");
-    _save.setOnClickListener(new OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        Toast.makeText(Viewer.this.getApplicationContext(),
-            "Saving not yet implemented", 1000).show();
-      }
-    });
-    rl.addView(_save);
-
-    vg = new LinearLayout(this);
-
-    hsv = new CustomHorizontalScrollView(this);
-    hsv.setId(1);
-    LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT,
-        LayoutParams.WRAP_CONTENT);
-    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-    hsv.setBackgroundColor(Color.WHITE);
-    hsv.setLayoutParams(lp);
-    rl.addView(hsv);
-
-    vg.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
-        LayoutParams.WRAP_CONTENT));
-    hsv.addView(vg);
-  }
-
-  @Override
-  protected void onDestroy() {
-    super.onDestroy();
-  }
-
-  @Override
-  protected void onPause() {
-    super.onPause();
-    iv = null;
-    vg = null;
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-  }
-
-  /**
-   * This function takes a filepath as a parameter and returns the corresponding
-   * image, correctly scaled and rotated (if necessary)
-   * 
-   * @param filePath
-   *          The filepath of the image
-   * @return the scaled and rotated bitmap
-   */
-  private static Bitmap setUpPicture(String filePath) {
-
-    int w = 512;
-    int h = 384; // size that does not lead to OutOfMemoryException on Nexus One
-    Bitmap b = BitmapFactory.decodeFile(filePath);
-
-    // Hack to determine whether the image is rotated
-    boolean rotated = b.getWidth() > b.getHeight();
-
-    Bitmap resultBmp = null;
-
-    // If not rotated, just scale it
-    int degree;
-    if ((degree = degreeRotated(filePath)) == 0) {
-      resultBmp = Bitmap.createScaledBitmap(b, w, h, true);
-      b.recycle();
-      b = null;
-      // If rotated, scale it by switching width and height and then rotated it
-    } else {
-      Bitmap scaledBmp = Bitmap.createScaledBitmap(b, w, h, true);
-      b.recycle();
-      b = null;
-      Matrix mat = new Matrix();
-      mat.postRotate(degree);
-      resultBmp = Bitmap.createBitmap(scaledBmp, 0, 0, w, h, mat,
-          true);
-
-      // Release image resources
-      scaledBmp.recycle();
-      scaledBmp = null;
-    }
-    return resultBmp;
-  }
-
-  /**
-   * RETURNS the number of degrees the image specified by FILEPATH is rotate
-   * (i.e. what degree rotation the phone was at while taking the picture.
-   * 
-   */
-  private static int degreeRotated(String filePath) {
-    try {
-      Metadata metadata = JpegMetadataReader.readMetadata(new File(
-          filePath));
-      Directory exifDirectory = metadata
-          .getDirectory(ExifDirectory.class);
-      int orientation = exifDirectory
-          .getInt(ExifDirectory.TAG_ORIENTATION);
-      switch (orientation) {
-        case 6:
-          return 90;
-        case 8:
-          return 270;
-        default:
-          return 0;
-
-      }
-    } catch (JpegProcessingException e1) {
-      e1.printStackTrace();
-    } catch (MetadataException e) {
-      e.printStackTrace();
     }
 
-    return 0;
-  }
+    /**
+     * Populates the LienarLayout VG with the image resources from IMAGELIST.
+     */
+    private void addDraggableImages() {
+        int counter = 0;
+        for (int i : imageList) {
+            CustomImageView temp = new CustomImageView(this);
+            temp.setImageResource(i);
+            temp.setId(counter);
+            counter++;
+            vg.addView(temp, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+        }
+    }
+
+    /**
+     * Adds the image specified by the Uri IMAGEURI to the current view.
+     * 
+     */
+    private void addImage(Uri imageURI) {
+        String[] filePathColumn = { MediaStore.Images.Media.DATA };
+        Cursor cursor = getContentResolver().query(imageURI, filePathColumn, null, null, null);
+        cursor.moveToFirst();
+
+        int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+        String filePath = cursor.getString(columnIndex);
+        cursor.close();
+
+        iv.setImageBitmap(Viewer.setUpPicture(filePath));
+
+        iv.invalidate();
+
+    }
+
+    /**
+     * Called by the constructor to set up the views. Because we need to keep
+     * track of a lot of the View elements, its easier for us to inflate each
+     * View in the Class rather than in the XML. This is where that happens.
+     */
+    private void init() {
+        root_layout = (LinearLayout) findViewById(R.id.root);
+
+        rl = new CustomRelativeLayout(this);
+        LayoutParams fill = new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT);
+        LayoutParams wrap = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        rl.setLayoutParams(fill);
+        root_layout.addView(rl);
+
+        iv = new ImageView(this);
+        iv.setLayoutParams(wrap);
+
+        rl.addView(iv);
+        rl.setEditable(iv);
+
+        _remove = new Button(this);
+        LayoutParams removeLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        removeLP.addRule(RelativeLayout.ABOVE, 1);
+        _remove.setLayoutParams(removeLP);
+        _remove.setText("Remove");
+        _remove.setId(2);
+        _remove.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                rl.removeView(rl.getSelectedImage());
+            }
+
+        });
+        rl.addView(_remove);
+
+        _save = new Button(this);
+        LayoutParams saveLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        saveLP.addRule(RelativeLayout.ABOVE, 1);
+        saveLP.addRule(RelativeLayout.ALIGN_RIGHT, 1);
+        _save.setLayoutParams(saveLP);
+        _save.setText("Save");
+        _save.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                rl.setDrawingCacheEnabled(true);
+                final Bitmap b = rl.getDrawingCache();
+                saver_.setBitmap(b);
+                String warning = _preferences.getString(SEE_WARNING, "not_set");
+                FileOutputStream fos = null;
+                Log.e("WHAT!?", warning);
+                if (!warning.equals(CHECKED)) {
+                    AlertDialog.Builder alert = new AlertDialog.Builder(Viewer.this);
+                    LayoutInflater inflater = Viewer.this.getLayoutInflater();
+                    View dialog = inflater.inflate(R.layout.save_location_warning, null);
+                    alert.setView(dialog);
+                    final CheckBox cb = (CheckBox) dialog.findViewById(R.id.ignore_warning);
+                    alert.setNeutralButton("Okay", new Dialog.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            try {
+                                if (cb.isChecked()) {
+                                    Log.e("WARNING", "Changin warning");
+                                    Editor edit = Viewer.this._preferences.edit();
+                                    edit.putString(SEE_WARNING, CHECKED);
+                                    edit.commit();
+                                }
+                                saver_.setOutputStream(new FileOutputStream(Environment.getExternalStorageDirectory() + "/Pictures/image.png"));
+                                saver_.setFilePath(Environment.getExternalStorageDirectory() + "/Pictures/image.jpg");
+                                saver_.save();
+                            } catch (FileNotFoundException e) {
+                                e.printStackTrace();
+                                Toast.makeText(Viewer.this, "Error writing file, please try again", 1000).show();
+                            }
+
+                        }
+
+                    });
+                    alert.create().show();
+                }
+            }
+
+        });
+        rl.addView(_save);
+
+        vg = new LinearLayout(this);
+
+        hsv = new CustomHorizontalScrollView(this);
+        hsv.setId(1);
+        LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        hsv.setBackgroundColor(Color.WHITE);
+        hsv.setLayoutParams(lp);
+        rl.addView(hsv);
+
+        vg.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+        hsv.addView(vg);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        iv = null;
+        vg = null;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    /**
+     * This function takes a filepath as a parameter and returns the
+     * corresponding image, correctly scaled and rotated (if necessary)
+     * 
+     * @param filePath
+     *            The filepath of the image
+     * @return the scaled and rotated bitmap
+     */
+    private static Bitmap setUpPicture(String filePath) {
+
+        int w = 512;
+        int h = 384; // size that does not lead to OutOfMemoryException on Nexus
+        // One
+        Bitmap b = BitmapFactory.decodeFile(filePath);
+
+        // Hack to determine whether the image is rotated
+        boolean rotated = b.getWidth() > b.getHeight();
+
+        Bitmap resultBmp = null;
+
+        // If not rotated, just scale it
+        int degree;
+        if ((degree = degreeRotated(filePath)) == 0) {
+            resultBmp = Bitmap.createScaledBitmap(b, w, h, true);
+            b.recycle();
+            b = null;
+            // If rotated, scale it by switching width and height and then
+            // rotated it
+        } else {
+            Bitmap scaledBmp = Bitmap.createScaledBitmap(b, w, h, true);
+            b.recycle();
+            b = null;
+            Matrix mat = new Matrix();
+            mat.postRotate(degree);
+            resultBmp = Bitmap.createBitmap(scaledBmp, 0, 0, w, h, mat, true);
+
+            // Release image resources
+            scaledBmp.recycle();
+            scaledBmp = null;
+        }
+        return resultBmp;
+    }
+
+    /**
+     * RETURNS the number of degrees the image specified by FILEPATH is rotate
+     * (i.e. what degree rotation the phone was at while taking the picture.
+     * 
+     */
+    private static int degreeRotated(String filePath) {
+        try {
+            Metadata metadata = JpegMetadataReader.readMetadata(new File(filePath));
+            Directory exifDirectory = metadata.getDirectory(ExifDirectory.class);
+            int orientation = exifDirectory.getInt(ExifDirectory.TAG_ORIENTATION);
+            switch (orientation) {
+                case 6:
+                    return 90;
+                case 8:
+                    return 270;
+                default:
+                    return 0;
+
+            }
+        } catch (JpegProcessingException e1) {
+            e1.printStackTrace();
+        } catch (MetadataException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
 }
