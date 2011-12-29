@@ -3,6 +3,7 @@ package com.owleyes.moustache;
 import java.util.ArrayList;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -59,5 +60,39 @@ public class CustomRelativeLayout extends RelativeLayout {
 
     public void handlePlusButton(int state) {
 
+    }
+
+    private void changeImageSize(int size) {
+        if (_images.size() <= dragging || dragging == -1) {
+            return;
+        }
+        Log.e("Dragging", dragging + "");
+        _images.get(dragging).scaleX(size);
+    }
+
+    private void rotateImageClockwise(int degree) {
+        if (_images.size() <= dragging || dragging == -1) {
+            return;
+        }
+        Log.e("ROTATE", "Rotating image");
+        _images.get(dragging).rotateX(degree);
+
+    }
+
+    public void handleEvent(int state, int amount) {
+        switch (state) {
+            case Viewer.ROTATE:
+                rotateImageClockwise(amount);
+                break;
+            case Viewer.SCALE:
+                changeImageSize(amount);
+                break;
+        }
+    }
+
+    public void removeAllSelected() {
+        for (CustomImageView v : _images) {
+            v.removeSelected();
+        }
     }
 }

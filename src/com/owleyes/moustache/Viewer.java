@@ -19,11 +19,14 @@ import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnTouchListener;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -48,13 +51,17 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
 
     private static final String CHECKED = "ignored_warning";
 
-    private static final int SCALE = 0;
+    public static final int SCALE = 0;
 
-    private static final int ROTATE = 1;
+    public static final int ROTATE = 1;
+
+    public static final int MINUS = 2;
+
+    public static final int PLUS = 3;
 
     /** The list of drawable resource ids. */
     private static final int[] imageList = { R.drawable.one, R.drawable.two, R.drawable.three, R.drawable.four, R.drawable.five, R.drawable.six, R.drawable.seven, R.drawable.eight, R.drawable.nine,
-            R.drawable.ten, R.drawable.eleven };
+            R.drawable.ten, R.drawable.eleven, R.drawable.temp };
 
     /** The Linear Layout that contains all other elements. */
     private LinearLayout root_layout;
@@ -91,10 +98,16 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
 
     private int _state;
 
+    private Handler _handler;
+
+    private UpdateImage _updateImageTask;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _saver = new SaveHelper(this);
+        _handler = new Handler();
+
         _preferences = this.getSharedPreferences(Main.PREFS_FILE, 0);
         setContentView(R.layout.nothing);
 
@@ -108,6 +121,7 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
 
         addDraggableImages();
 
+        _updateImageTask = new UpdateImage(rl, _handler);
     }
 
     /**
@@ -194,6 +208,27 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
                 rl.handleMinusButton(_state);
             }
         });
+        _minus.setOnTouchListener(new OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                _updateImageTask.setState(_state, Viewer.MINUS);
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        Log.e("Pressed", "" + v.isInTouchMode());
+                        _handler.removeCallbacks(_updateImageTask);
+                        _handler.postDelayed(_updateImageTask, 100);
+                        return true;
+                    case MotionEvent.ACTION_OUTSIDE:
+                        _handler.removeCallbacks(_updateImageTask);
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        _handler.removeCallbacks(_updateImageTask);
+                        return true;
+                }
+
+                return true;
+            }
+        });
 
         _plus = new Button(this);
         LayoutParams plusLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
@@ -204,10 +239,26 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
         _plus.setText("");
         _plus.setBackgroundResource(R.drawable.plus);
         _plus.setLayoutParams(plusLP);
-        _plus.setOnClickListener(new OnClickListener() {
+
+        _plus.setOnTouchListener(new OnTouchListener() {
             @Override
-            public void onClick(View v) {
-                rl.handlePlusButton(_state);
+            public boolean onTouch(View v, MotionEvent event) {
+                _updateImageTask.setState(_state, Viewer.PLUS);
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        Log.e("Pressed", "" + v.isInTouchMode());
+                        _handler.removeCallbacks(_updateImageTask);
+                        _handler.postDelayed(_updateImageTask, 100);
+                        return true;
+                    case MotionEvent.ACTION_OUTSIDE:
+                        _handler.removeCallbacks(_updateImageTask);
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        _handler.removeCallbacks(_updateImageTask);
+                        return true;
+                }
+
+                return true;
             }
         });
         _mode = new ToggleButton(this);
