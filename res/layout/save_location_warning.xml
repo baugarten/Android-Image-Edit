@@ -10,9 +10,8 @@
       android:layout_height="wrap_content"
       android:textSize="18sp"
       android:text="Warning: your pictures will automatically \
-be saved to external storage. Otherwise, they won't appear in \
-your image gallery. If you want to change this setting, please \
-access the settings screen in the menu."
+be saved to internal storage. Future updates will allow for you\
+to save this to an SD card."
     />
     <CheckBox
         android:id="@+id/ignore_warning"
