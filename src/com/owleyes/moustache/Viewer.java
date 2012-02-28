@@ -54,6 +54,10 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ImageView.ScaleType;
 import android.widget.RelativeLayout.LayoutParams;
 
+import com.google.ads.AdRequest;
+import com.google.ads.AdSize;
+import com.google.ads.AdView;
+
 public class Viewer extends Activity implements OnCheckedChangeListener {
 
     private static final String SEE_WARNING = "warning";
@@ -117,7 +121,13 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
     /** The orientation of the image we are viewing. */
     private int mOrientation;
 
-    private static final String MY_IDENTIFIER = "@#$ajsdfh$#@!";
+    /** Changes from rotate to scale mode. */
+    private MenuItem switchButton;
+
+    private AdView mAdView;
+
+    private static final String MY_IDENTIFIER = "Made with Moustache Madness!";
+    private static final String MY_AD_ID = "a14f4c7839ee239";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,7 +135,7 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
 
     }
 
-    private void basicInit() {
+    private void basicInit(int orientation) {
         root_layout = (LinearLayout) findViewById(R.id.root);
 
         mRelative = new CustomRelativeLayout(this);
@@ -134,10 +144,27 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
         mRelative.setLayoutParams(fill);
         root_layout.addView(mRelative);
 
+        mAdView = new AdView(this, AdSize.BANNER, MY_AD_ID);
+
+        AdRequest request = new AdRequest();
+        request.addTestDevice("45A2D3C16C738A08425D22872911765E");
+        mAdView.setLayoutParams(wrap);
+
+        mAdView.setMinimumHeight(75);
+        mAdView.setMinimumWidth(480);
+        mAdView.setId(150);
+        mRelative.addView(mAdView);
+        mAdView.loadAd(request);
         mCurrentPicture = new ImageView(this);
 
         mCurrentPicture.setScaleType(ScaleType.CENTER_CROP);
-        mCurrentPicture.setLayoutParams(wrap);
+        LayoutParams picParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        picParams.addRule(RelativeLayout.BELOW, 150);
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            picParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        }
+
+        mCurrentPicture.setLayoutParams(picParams);
 
         mRelative.addView(mCurrentPicture);
         mRelative.setEditable(mCurrentPicture);
@@ -148,6 +175,7 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
      */
     private void addDraggableImages() {
         int counter = 0;
+        mMoustacheGroup.setId(200);
         for (int i : imageList) {
             CustomImageView temp = new CustomImageView(this);
             temp.setImageResource(i);
@@ -299,6 +327,7 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
             private long currentTime;
         });
         mMode = new ToggleButton(this);
+        mMode.setClickable(false);
         if (portrait) {
             mMode.setPadding(0, 0, 0, (int) getResources().getDimension(R.dimen.five));
         } else {
@@ -488,9 +517,10 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
 
         // Inflate all the views.
         int orientation = getResources().getConfiguration().orientation;
-        basicInit();
+        basicInit(orientation);
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             initPortrait();
+
         } else {
             initLandscape();
         }
@@ -662,6 +692,7 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu, menu);
+        switchButton = (MenuItem) menu.findItem(R.id.switch_mode);
         return true;
     }
 
@@ -683,9 +714,25 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
                     return true;
                 }
                 sharingIntent.setType("image/png");
-                sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse(path));
+                sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File(path)));
                 startActivity(Intent.createChooser(sharingIntent, "Share image using"));
-
+                break;
+            case R.id.switch_mode:
+                if (mState == ROTATE) {
+                    /* Scale mode */
+                    mMinus.setBackgroundResource(R.drawable.minus2);
+                    mPlus.setBackgroundResource(R.drawable.plus2);
+                    mMode.setBackgroundResource(R.drawable.scale);
+                    mState = SCALE;
+                    switchButton.setTitle("Rotate");
+                } else {
+                    /* Rotate mode */
+                    mMinus.setBackgroundResource(R.drawable.ctr_clk2);
+                    mPlus.setBackgroundResource(R.drawable.clk2);
+                    mMode.setBackgroundResource(R.drawable.rotate);
+                    mState = ROTATE;
+                    switchButton.setTitle("Scale");
+                }
         }
         return true;
     }
