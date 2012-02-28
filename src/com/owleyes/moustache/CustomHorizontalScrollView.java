@@ -82,7 +82,9 @@ public class CustomHorizontalScrollView extends HorizontalScrollView {
                 return true;
 
             case MotionEvent.ACTION_UP:
-                ((CustomImageView) dragging).onTouchEvent(ev);
+                if (dragging != null) {
+                    ((CustomImageView) dragging).onTouchEvent(ev);
+                }
                 mScroll = false;
                 dragging = null;
 

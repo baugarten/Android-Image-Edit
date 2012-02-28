@@ -1,7 +1,6 @@
 package com.owleyes.moustache;
 
 import android.os.Handler;
-import android.util.Log;
 
 public class UpdateImage implements Runnable {
 
@@ -28,7 +27,6 @@ public class UpdateImage implements Runnable {
 
     @Override
     public void run() {
-        Log.e("Run", "We are running");
         int amount = (int) ((System.currentTimeMillis() - _currentTime) / 100);
         if (_button == Viewer.MINUS) {
             amount = -amount;

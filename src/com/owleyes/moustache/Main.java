@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.util.Log;
 
 /**
@@ -20,26 +21,50 @@ public class Main extends Activity {
     /** The URI of the Image to display. */
     private Uri imageUri;
 
+    private int _wait;
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        this.setContentView(R.layout.main_screen);
+        _wait = 1000;
+
         imageUri = null;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (imageUri != null) {
-            Intent viewActivity = new Intent(this, Viewer.class);
-            viewActivity.putExtra("image", imageUri);
-            startActivity(viewActivity);
+        if (_wait != 0) {
+
+            new CountDownTimer(_wait, _wait) {
+                @Override
+                public void onFinish() {
+                    if (imageUri != null) {
+                        Intent viewActivity = new Intent(Main.this, Viewer.class);
+                        viewActivity.putExtra("image", imageUri);
+                        startActivity(viewActivity);
+                    } else {
+                        startActivityForResult(new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI), 0);
+                    }
+                }
+
+                @Override
+                public void onTick(long millisUntilFinished) {
+
+                }
+
+            }.start();
+            _wait = 0;
         } else {
-            startActivityForResult(
-                    new Intent(
-                            Intent.ACTION_PICK,
-                            android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI),
-                    0);
+            if (imageUri != null) {
+                Intent viewActivity = new Intent(this, Viewer.class);
+                viewActivity.putExtra("image", imageUri);
+                startActivity(viewActivity);
+            } else {
+                startActivityForResult(new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI), 0);
+            }
         }
     }
 
@@ -50,14 +75,15 @@ public class Main extends Activity {
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode,
-            Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == Activity.RESULT_OK) {
             imageUri = data.getData();
-        } else
+        } else {
+            System.exit(0);
             Log.e("result", "BAD");
+        }
     }
 }

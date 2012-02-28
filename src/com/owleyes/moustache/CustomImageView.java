@@ -10,7 +10,6 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
@@ -80,10 +79,16 @@ public class CustomImageView extends ImageView {
                 break;
             case MotionEvent.ACTION_MOVE:
                 coords.x = (int) event.getRawX() + (this.getWidth() / 2);
-                coords.y = (int) event.getRawY() + 50;
+                coords.y = (int) event.getRawY() - 150;
                 this.layout(coords.x - (this.getWidth()), coords.y - (this.getHeight()), coords.x, coords.y);
                 break;
             case MotionEvent.ACTION_UP:
+                if (this.getParent() instanceof CustomRelativeLayout) {
+                    if (((CustomRelativeLayout) this.getParent()).outOfBounds(coords)) {
+                        ((CustomRelativeLayout) this.getParent()).removeView(this);
+                        return true;
+                    }
+                }
                 _selected = false;
         }
         ((View) this.getParent()).invalidate();
@@ -104,7 +109,6 @@ public class CustomImageView extends ImageView {
      */
     public void scaleX(double amount) {
         this.removeSelected();
-
         Matrix mat = new Matrix();
         float amount2 = ((float) amount) / 10;
         coords.x += this.getWidth() * amount2 / 2;
@@ -130,7 +134,7 @@ public class CustomImageView extends ImageView {
         this.removeSelected();
         this.setDrawingCacheEnabled(true);
         Matrix mat = new Matrix();
-        amount *= 10;
+        amount *= 5;
         amount = amount % 360;
         if (amount < 0) {
             amount += 360;
@@ -164,7 +168,6 @@ public class CustomImageView extends ImageView {
      * pixels on the top and bottom with transparency. RETURNS the new Bitmap
      */
     private Bitmap padBitmap(Bitmap newBm, int widthcrop, int heightcrop) {
-        Log.e("Padding", widthcrop + " " + heightcrop);
         int[] pixels = new int[(newBm.getWidth() + 2 * widthcrop) * (newBm.getHeight() + 2 * heightcrop)];
         int index = 0;
         for (; index < heightcrop * (widthcrop * 2 + newBm.getWidth()); index++) {

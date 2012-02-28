@@ -3,79 +3,74 @@ package com.owleyes.moustache;
 import java.util.ArrayList;
 
 import android.content.Context;
-import android.util.Log;
+import android.graphics.Point;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 public class CustomRelativeLayout extends RelativeLayout {
-    private int dragging;
-    private ImageView editable;
+    private int mDragging;
+    private ImageView mEditable;
 
-    private ArrayList<CustomImageView> _images;
+    private ArrayList<CustomImageView> mImages;
 
     public CustomRelativeLayout(Context context) {
         super(context);
-        _images = new ArrayList<CustomImageView>();
-        dragging = -1;
+        mImages = new ArrayList<CustomImageView>();
+        mDragging = -1;
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
-        for (int i = 0; i < _images.size(); i++) {
-            _images.get(i).reLayout();
+        for (int i = 0; i < mImages.size(); i++) {
+            mImages.get(i).reLayout();
         }
     }
 
+    /**
+     * Sets the image that the user is currently dragging/scaling/etc to CIV.
+     */
     public void setDragging(CustomImageView civ) {
         if (civ == null) {
-            dragging = -1;
+            mDragging = -1;
         } else {
-            dragging = _images.size();
-            _images.add(civ);
+            mDragging = mImages.size();
+            mImages.add(civ);
         }
     }
 
+    /** Sets the image being edited and viewed (the main one) to CIV. */
     public void setEditable(ImageView civ) {
-        editable = civ;
+        mEditable = civ;
 
     }
 
+    /** RETURNS the image currently being edited. */
     public ImageView getEditableImage() {
-        return editable;
+        return mEditable;
     }
 
+    /** RETURNS the image currently being dragging and placed. */
     public View getSelectedImage() {
-        if (dragging == -1) {
+        if (mDragging == -1) {
             return null;
         }
-        return _images.get(dragging);
-    }
-
-    public void handleMinusButton(int state) {
-        // TODO Auto-generated method stub
-
-    }
-
-    public void handlePlusButton(int state) {
-
+        return mImages.get(mDragging);
     }
 
     private void changeImageSize(int size) {
-        if (_images.size() <= dragging || dragging == -1) {
+        if (mImages.size() <= mDragging || mDragging == -1) {
             return;
         }
-        Log.e("Dragging", dragging + "");
-        _images.get(dragging).scaleX(size);
+        mImages.get(mDragging).scaleX(size);
     }
 
     private void rotateImageClockwise(int degree) {
-        if (_images.size() <= dragging || dragging == -1) {
+        if (mImages.size() <= mDragging || mDragging == -1) {
             return;
         }
-        Log.e("ROTATE", "Rotating image");
-        _images.get(dragging).rotateX(degree);
+        mImages.get(mDragging).rotateX(degree);
 
     }
 
@@ -91,8 +86,12 @@ public class CustomRelativeLayout extends RelativeLayout {
     }
 
     public void removeAllSelected() {
-        for (CustomImageView v : _images) {
+        for (CustomImageView v : mImages) {
             v.removeSelected();
         }
+    }
+
+    public boolean outOfBounds(Point coords) {
+        return mEditable.getBottom() < coords.y || mEditable.getTop() > coords.y || mEditable.getRight() < coords.x || mEditable.getLeft() > coords.x;
     }
 }
