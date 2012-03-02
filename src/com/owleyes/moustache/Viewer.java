@@ -33,6 +33,7 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
 import android.util.Log;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -61,6 +62,8 @@ import com.google.ads.AdView;
 public class Viewer extends Activity implements OnCheckedChangeListener {
 
     private static final String SEE_WARNING = "warning";
+
+    private static final String PREF_KEY_DELETE = "_to_delete";
 
     private static final String CHECKED = "ignored_warning";
 
@@ -92,7 +95,7 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
     private CustomRelativeLayout mRelative;
 
     /** The remove button. */
-    private Button mRemove;
+    private ImageView mRemove;
 
     /** The save button. */
     private Button mSave;
@@ -103,11 +106,17 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
     /** The mode. Either Scaling or Rotating. */
     private ToggleButton mMode;
 
+    private static final int MODE_ID = 10;
+
     /** The minus button or counterclockwise rotate. */
     private Button mMinus;
 
+    private static final int MINUS_ID = 15;
+
     /** The plus button or clockwise rotate. */
     private Button mPlus;
+
+    private static final int PLUS_ID = 20;
 
     /** The state of the current Viewer -- either rotate or scale. */
     private int mState;
@@ -126,6 +135,20 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
 
     private AdView mAdView;
 
+    private RelativeLayout mControls;
+
+    private static final int REMOVE_ID = 30;
+
+    private static final int SAVE_ID = 25;
+
+    private static final int SCROLL_VIEW_SIZE = 105;
+
+    /**
+     * Depending on the orientation, this is the amount of screen space taken up
+     * by the options -- the ScrollView and buttons.
+     */
+    private static final int OPTIONS_SIZE = 170;
+
     private static final String MY_IDENTIFIER = "Made with Moustache Madness!";
     private static final String MY_AD_ID = "a14f4c7839ee239";
 
@@ -137,8 +160,11 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
 
     private void basicInit(int orientation) {
         root_layout = (LinearLayout) findViewById(R.id.root);
+        root_layout.setBackgroundColor(15921906);
 
         mRelative = new CustomRelativeLayout(this);
+        mRelative.setBackgroundColor(Color.rgb(242, 242, 242));
+
         LayoutParams fill = new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT);
         LayoutParams wrap = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         mRelative.setLayoutParams(fill);
@@ -150,8 +176,8 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
         request.addTestDevice("45A2D3C16C738A08425D22872911765E");
         mAdView.setLayoutParams(wrap);
 
-        mAdView.setMinimumHeight(75);
-        mAdView.setMinimumWidth(480);
+        mAdView.setMinimumHeight(AdSize.BANNER.getHeight());
+        mAdView.setMinimumWidth(AdSize.BANNER.getWidth());
         mAdView.setId(150);
         mRelative.addView(mAdView);
         mAdView.loadAd(request);
@@ -160,12 +186,38 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
         mCurrentPicture.setScaleType(ScaleType.CENTER_CROP);
         LayoutParams picParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         picParams.addRule(RelativeLayout.BELOW, 150);
+        Display d = this.getWindowManager().getDefaultDisplay();
+        int widthy = d.getWidth();
+        int heighty = d.getHeight();
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             picParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            mCurrentPicture.setMaxHeight(heighty - AdSize.BANNER.getHeight() - OPTIONS_SIZE);
+            mCurrentPicture.setMaxWidth(widthy);
+        } else {
+            mCurrentPicture.setMaxHeight(heighty - AdSize.BANNER.getHeight());
+            mCurrentPicture.setMaxWidth(widthy - OPTIONS_SIZE);
         }
 
         mCurrentPicture.setLayoutParams(picParams);
 
+        mControls = new RelativeLayout(this);
+
+        LayoutParams controlParams = null;
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            Log.e("Max height: ", (OPTIONS_SIZE - SCROLL_VIEW_SIZE) + "");
+            controlParams = new LayoutParams(LayoutParams.FILL_PARENT, OPTIONS_SIZE - SCROLL_VIEW_SIZE);
+            controlParams.bottomMargin = 10;
+            controlParams.addRule(RelativeLayout.ABOVE, 1);
+        } else {
+            controlParams = new LayoutParams(OPTIONS_SIZE - SCROLL_VIEW_SIZE, LayoutParams.FILL_PARENT);
+            controlParams.rightMargin = 10;
+            // mControls.setOrientation(LinearLayout.VERTICAL);
+            controlParams.addRule(RelativeLayout.LEFT_OF, 1);
+        }
+        // mControls.setPadding(0, 0, 0, -10)
+        mControls.setMinimumHeight(55);
+        mControls.setLayoutParams(controlParams);
+        mRelative.addView(mControls);
         mRelative.addView(mCurrentPicture);
         mRelative.setEditable(mCurrentPicture);
     }
@@ -224,9 +276,15 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
      * track of a lot of the View elements, its easier for us to inflate each
      * View in the Class rather than in the XML. This is where that happens.
      */
-    private void init(LayoutParams remove, LayoutParams minus, LayoutParams mode, LayoutParams plus, LayoutParams save, boolean portrait) {
+    private void init(LayoutParams removeLP, android.widget.LinearLayout.LayoutParams minusLP, android.widget.LinearLayout.LayoutParams modeLP, android.widget.LinearLayout.LayoutParams plusLP,
+            LayoutParams saveLP, boolean portrait) {
 
-        mRemove = this.createButton(R.drawable.remove, remove, 2);
+        mRemove = new ImageView(this);
+        mRemove.setLayoutParams(removeLP);
+        mRemove.setImageResource(R.drawable.trash1);
+        mRemove.setId(REMOVE_ID);
+        mRelative.setTrashIcon(mRemove);
+        mRemove.setMaxHeight(Viewer.OPTIONS_SIZE - Viewer.SCROLL_VIEW_SIZE);
         if (portrait) {
             mRemove.setPadding(0, 0, (int) getResources().getDimension(R.dimen.five), 0);
         } else {
@@ -239,37 +297,38 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
             }
         });
 
-        mMinus = createButton(R.drawable.minus2, minus, 15);
+        mMinus = createButton(R.drawable.minus, minusLP, MINUS_ID);
         mMinus.setText("");
+        mMinus.setMaxHeight(Viewer.OPTIONS_SIZE - Viewer.SCROLL_VIEW_SIZE);
         mMinus.setOnTouchListener(new OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 _updateImageTask.setState(mState, Viewer.MINUS);
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        if (mState == Viewer.SCALE) {
-                            mMinus.setBackgroundResource(R.drawable.minus2);
-                        } else {
-                            mMinus.setBackgroundResource(R.drawable.ctr_clk2);
-                        }
+                        // if (mState == Viewer.SCALE) {
+                        // mMinus.setBackgroundResource(R.drawable.minus2);
+                        // } else {
+                        // mMinus.setBackgroundResource(R.drawable.ctr_clk2);
+                        // }
                         currentTime = System.currentTimeMillis();
                         mHandler.removeCallbacks(_updateImageTask);
                         mHandler.postDelayed(_updateImageTask, 30);
                         return true;
                     case MotionEvent.ACTION_OUTSIDE:
-                        if (mState == Viewer.SCALE) {
-                            mMinus.setBackgroundResource(R.drawable.minus_pressed);
-                        } else {
-                            mMinus.setBackgroundResource(R.drawable.ctr_clk_pressed);
-                        }
+                        // if (mState == Viewer.SCALE) {
+                        // mMinus.setBackgroundResource(R.drawable.minus_pressed);
+                        // } else {
+                        // mMinus.setBackgroundResource(R.drawable.ctr_clk_pressed);
+                        // }
                         mHandler.removeCallbacks(_updateImageTask);
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if (mState == Viewer.SCALE) {
-                            mMinus.setBackgroundResource(R.drawable.minus_pressed);
-                        } else {
-                            mMinus.setBackgroundResource(R.drawable.ctr_clk_pressed);
-                        }
+                        // if (mState == Viewer.SCALE) {
+                        // mMinus.setBackgroundResource(R.drawable.minus_pressed);
+                        // } else {
+                        // mMinus.setBackgroundResource(R.drawable.ctr_clk_pressed);
+                        // }
                         if (System.currentTimeMillis() - currentTime < 200) {
                             mRelative.handleEvent(mState, -3);
                         }
@@ -283,38 +342,38 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
             private long currentTime;
         });
 
-        mPlus = createButton(R.drawable.plus2, plus, 20);
+        mPlus = createButton(R.drawable.plus, plusLP, PLUS_ID);
         mPlus.setText("");
-
+        mPlus.setMaxHeight(Viewer.OPTIONS_SIZE - Viewer.SCROLL_VIEW_SIZE);
         mPlus.setOnTouchListener(new OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 _updateImageTask.setState(mState, Viewer.PLUS);
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        if (mState == Viewer.SCALE) {
-                            mPlus.setBackgroundResource(R.drawable.plus2);
-                        } else {
-                            mPlus.setBackgroundResource(R.drawable.clk2);
-                        }
+                        // if (mState == Viewer.SCALE) {
+                        // mPlus.setBackgroundResource(R.drawable.plus2);
+                        // } else {
+                        // mPlus.setBackgroundResource(R.drawable.clk2);
+                        // }
                         currentTime = System.currentTimeMillis();
                         mHandler.removeCallbacks(_updateImageTask);
                         mHandler.postDelayed(_updateImageTask, 30);
                         return true;
                     case MotionEvent.ACTION_OUTSIDE:
-                        if (mState == Viewer.SCALE) {
-                            mPlus.setBackgroundResource(R.drawable.plus_pressed);
-                        } else {
-                            mPlus.setBackgroundResource(R.drawable.clk_pressed);
-                        }
+                        // if (mState == Viewer.SCALE) {
+                        // mPlus.setBackgroundResource(R.drawable.plus_pressed);
+                        // } else {
+                        // mPlus.setBackgroundResource(R.drawable.clk_pressed);
+                        // }
                         mHandler.removeCallbacks(_updateImageTask);
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if (mState == Viewer.SCALE) {
-                            mPlus.setBackgroundResource(R.drawable.plus_pressed);
-                        } else {
-                            mPlus.setBackgroundResource(R.drawable.clk_pressed);
-                        }
+                        // if (mState == Viewer.SCALE) {
+                        // mPlus.setBackgroundResource(R.drawable.plus_pressed);
+                        // } else {
+                        // mPlus.setBackgroundResource(R.drawable.clk_pressed);
+                        // }
                         if (System.currentTimeMillis() - currentTime < 200) {
                             mRelative.handleEvent(mState, 3);
                         }
@@ -327,25 +386,25 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
             private long currentTime;
         });
         mMode = new ToggleButton(this);
-        mMode.setClickable(false);
         if (portrait) {
-            mMode.setPadding(0, 0, 0, (int) getResources().getDimension(R.dimen.five));
-        } else {
-            // mMode.setPadding(0, 0, (int)
-            // getResources().getDimension(R.dimen.five), 0);
+            mMode.setPadding(0, 0, 0, 0);
         }
-        mMode.setLayoutParams(mode);
-        mMode.setBackgroundResource(R.drawable.scale);
+        mMode.setMaxHeight(Viewer.OPTIONS_SIZE - Viewer.SCROLL_VIEW_SIZE);
+        mMode.setLayoutParams(modeLP);
+        mMode.setBackgroundResource(R.drawable.rotate_switch);
         mMode.setTextOff("");
         mMode.setTextOn("");
         mMode.setChecked(true);
-        mMode.setId(10);
+        mMode.setId(MODE_ID);
         mMode.setOnCheckedChangeListener(this);
 
         mState = SCALE;
 
-        mSave = createButton(R.drawable.save, save, 25);
-
+        mSave = new Button(this);
+        mSave.setBackgroundResource(R.drawable.save);
+        mSave.setLayoutParams(saveLP);
+        mSave.setId(SAVE_ID);
+        mSave.setMaxHeight(Viewer.OPTIONS_SIZE - Viewer.SCROLL_VIEW_SIZE);
         mSave.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -392,9 +451,6 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
             }
         });
 
-        mRelative.addView(mRemove);
-        mRelative.addView(mSave);
-
         mMoustacheGroup = new LinearLayout(this);
 
         if (portrait) {
@@ -411,7 +467,7 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
             lp = new LayoutParams(100, LayoutParams.FILL_PARENT);
             lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
         }
-        mHorizontalScroll.setBackgroundColor(Color.WHITE);
+        // mHorizontalScroll.setBackgroundColor(Color.rgb(242, 242, 242));
         mHorizontalScroll.setLayoutParams(lp);
         mRelative.addView(mHorizontalScroll);
 
@@ -425,27 +481,23 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
     private void initPortrait() {
         Resources res = getResources();
         LayoutParams removeLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        removeLP.addRule(RelativeLayout.ABOVE, 1);
+        removeLP.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+        removeLP.leftMargin = (int) res.getDimension(R.dimen.three);
 
-        LayoutParams minusLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        minusLP.rightMargin = (int) res.getDimension(R.dimen.three);
+        LinearLayout.LayoutParams minusLP = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        minusLP.rightMargin = (int) res.getDimension(R.dimen.five);
 
-        LayoutParams plusLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        plusLP.addRule(RelativeLayout.RIGHT_OF, 10);
-        plusLP.leftMargin = (int) res.getDimension(R.dimen.three);
+        LinearLayout.LayoutParams plusLP = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        plusLP.leftMargin = (int) res.getDimension(R.dimen.five);
 
-        LayoutParams modeLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        modeLP.addRule(RelativeLayout.RIGHT_OF, 15);
-        modeLP.bottomMargin = (int) res.getDimension(R.dimen.five);
+        LinearLayout.LayoutParams modeLP = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
 
         LayoutParams saveLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        saveLP.addRule(RelativeLayout.ABOVE, 1);
-        saveLP.addRule(RelativeLayout.ALIGN_RIGHT, 1);
-        saveLP.leftMargin = (int) res.getDimension(R.dimen.two);
+        saveLP.rightMargin = (int) res.getDimension(R.dimen.three);
+        saveLP.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
 
         LinearLayout layout = new LinearLayout(this);
         LayoutParams layoutLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        layoutLP.addRule(RelativeLayout.ABOVE, 1);
         layoutLP.addRule(RelativeLayout.CENTER_HORIZONTAL);
         layout.setLayoutParams(layoutLP);
 
@@ -454,44 +506,45 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
         layout.addView(mMinus);
         layout.addView(mMode);
         layout.addView(mPlus);
-        mRelative.addView(layout);
+        mControls.addView(mRemove);
+        mControls.addView(layout);
+
+        mControls.addView(mSave);
     }
 
     private void initLandscape() {
         Resources res = getResources();
         LayoutParams removeLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        removeLP.rightMargin = (int) res.getDimension(R.dimen.two);
-        removeLP.addRule(RelativeLayout.LEFT_OF, 1);
+        // removeLP.rightMargin = (int) res.getDimension(R.dimen.two);
+        removeLP.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
 
-        LayoutParams minusLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        minusLP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        LinearLayout.LayoutParams minusLP = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        minusLP.topMargin = (int) res.getDimensionPixelOffset(R.dimen.five);
 
-        LayoutParams plusLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        plusLP.addRule(RelativeLayout.BELOW, 10);
-        plusLP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        LinearLayout.LayoutParams plusLP = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        plusLP.bottomMargin = (int) res.getDimensionPixelOffset(R.dimen.five);
 
-        LayoutParams modeLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        modeLP.addRule(RelativeLayout.BELOW, 15);
-        modeLP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        LinearLayout.LayoutParams modeLP = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
 
         LayoutParams saveLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        saveLP.addRule(RelativeLayout.LEFT_OF, 1);
-        saveLP.addRule(RelativeLayout.ALIGN_BOTTOM, 1);
-        saveLP.rightMargin = (int) res.getDimension(R.dimen.two);
+        saveLP.addRule(RelativeLayout.ALIGN_PARENT_TOP);
 
         LinearLayout layout = new LinearLayout(this);
         LayoutParams layoutLP = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        layoutLP.addRule(RelativeLayout.LEFT_OF, 1);
         layoutLP.addRule(RelativeLayout.CENTER_VERTICAL);
         layout.setLayoutParams(layoutLP);
         layout.setOrientation(LinearLayout.VERTICAL);
 
         init(removeLP, minusLP, modeLP, plusLP, saveLP, false);
 
-        layout.addView(mMinus);
-        layout.addView(mMode);
         layout.addView(mPlus);
-        mRelative.addView(layout);
+        layout.addView(mMode);
+        layout.addView(mMinus);
+
+        mControls.addView(mRemove);
+        mControls.addView(layout);
+        mControls.addView(mSave);
+
     }
 
     @Override
@@ -526,13 +579,31 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
         }
 
         Intent intent = getIntent();
-        Uri imageURI = (Uri) intent.getParcelableExtra("image");
+        Uri imageURI = null;
+        Log.e("URI:", intent.getData() + "");
+        if (intent.getAction() != null && intent.getAction().equals(Intent.ACTION_SEND)) {
+            Bundle extras = intent.getExtras();
+            if (extras.containsKey(Intent.EXTRA_STREAM)) {
+                imageURI = (Uri) extras.getParcelable(Intent.EXTRA_STREAM);
+            }
+        } else if (intent.getAction() != null && intent.getAction().equals(Intent.ACTION_VIEW)) {
+            imageURI = intent.getData();
+        } else {
+            imageURI = (Uri) intent.getParcelableExtra("image");
+        }
 
         addImage(imageURI);
 
         addDraggableImages();
 
         _updateImageTask = new UpdateImage(mRelative, mHandler);
+
+        /*
+         * Set<String> strings = new HashSet<String>(); strings =
+         * mPreferences.getStringSet(PREF_KEY_DELETE, strings); if
+         * (!strings.isEmpty()) { Iterator<String> itr = strings.iterator();
+         * while (itr.hasNext()) { new File(itr.next()).delete(); } }
+         */
     }
 
     /**
@@ -628,30 +699,31 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if (isChecked) {
             /* Scale mode */
-            mMinus.setBackgroundResource(R.drawable.minus2);
-            mPlus.setBackgroundResource(R.drawable.plus2);
-            mMode.setBackgroundResource(R.drawable.scale);
+            mMinus.setBackgroundResource(R.drawable.minus);
+            mPlus.setBackgroundResource(R.drawable.plus);
+            mMode.setBackgroundResource(R.drawable.rotate_switch);
             mState = SCALE;
         } else {
             /* Rotate mode */
-            mMinus.setBackgroundResource(R.drawable.ctr_clk2);
-            mPlus.setBackgroundResource(R.drawable.clk2);
-            mMode.setBackgroundResource(R.drawable.rotate);
+            mMinus.setBackgroundResource(R.drawable.ctr_clk);
+            mPlus.setBackgroundResource(R.drawable.clk);
+            mMode.setBackgroundResource(R.drawable.scale_switch);
             mState = ROTATE;
         }
 
     }
 
-    private Button createButton(int resource, LayoutParams params, int id) {
+    private Button createButton(int resource, android.widget.LinearLayout.LayoutParams minusLP, int id) {
         Button button = new Button(this);
         button.setBackgroundResource(resource);
-        button.setLayoutParams(params);
+        button.setLayoutParams(minusLP);
         button.setId(id);
         return button;
     }
 
     private String saveInternal(Bitmap image) {
         // String save = null; // =
+        Log.e("HEIGHT OF SCROLLVIEW", this.mHorizontalScroll.getHeight() + "");
         Uri uri = Uri.parse(android.provider.MediaStore.Images.Media.insertImage(Viewer.this.getContentResolver(), image, null, null));
         String save = this.getRealPathFromURI(uri);
 
@@ -716,22 +788,28 @@ public class Viewer extends Activity implements OnCheckedChangeListener {
                 sharingIntent.setType("image/png");
                 sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File(path)));
                 startActivity(Intent.createChooser(sharingIntent, "Share image using"));
+                /*
+                 * Editor editor = mPreferences.edit(); Set<String> strings =
+                 * new HashSet<String>(); strings =
+                 * mPreferences.getStringSet(PREF_KEY_DELETE, strings);
+                 * strings.add(path); editor.putStringSet(PREF_KEY_DELETE,
+                 * strings);
+                 */
+
                 break;
             case R.id.switch_mode:
                 if (mState == ROTATE) {
                     /* Scale mode */
-                    mMinus.setBackgroundResource(R.drawable.minus2);
-                    mPlus.setBackgroundResource(R.drawable.plus2);
-                    mMode.setBackgroundResource(R.drawable.scale);
+                    mMinus.setBackgroundResource(R.drawable.minus);
+                    mPlus.setBackgroundResource(R.drawable.plus);
+                    mMode.setBackgroundResource(R.drawable.rotate_switch);
                     mState = SCALE;
-                    switchButton.setTitle("Rotate");
                 } else {
                     /* Rotate mode */
-                    mMinus.setBackgroundResource(R.drawable.ctr_clk2);
-                    mPlus.setBackgroundResource(R.drawable.clk2);
-                    mMode.setBackgroundResource(R.drawable.rotate);
+                    mMinus.setBackgroundResource(R.drawable.ctr_clk);
+                    mPlus.setBackgroundResource(R.drawable.clk);
+                    mMode.setBackgroundResource(R.drawable.scale_switch);
                     mState = ROTATE;
-                    switchButton.setTitle("Scale");
                 }
         }
         return true;

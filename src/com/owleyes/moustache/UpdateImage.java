@@ -27,11 +27,12 @@ public class UpdateImage implements Runnable {
 
     @Override
     public void run() {
-        int amount = (int) ((System.currentTimeMillis() - _currentTime) / 100);
+
+        int amount = 2;
         if (_button == Viewer.MINUS) {
             amount = -amount;
         }
-        _rl.handleEvent(_state, amount);
+        _rl.handleEvent(_state, amount * 5);
         _handler.postDelayed(this, 100);
     }
 }

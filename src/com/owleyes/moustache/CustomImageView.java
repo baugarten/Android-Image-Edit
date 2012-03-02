@@ -1,20 +1,28 @@
 package com.owleyes.moustache;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
-import android.graphics.drawable.BitmapDrawable;
+import android.graphics.Bitmap.Config;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
+import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.Animation.AnimationListener;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 
-public class CustomImageView extends ImageView {
+public class CustomImageView extends ImageView implements AnimationListener {
 
     private Point coords = new Point();
 
@@ -22,7 +30,24 @@ public class CustomImageView extends ImageView {
 
     private boolean _delayedSelected;
 
+    private boolean isRotating;
+
+    private int width;
+    private int height;
+
+    private int currentRotateEnd = 0;
+
+    private int futureRotateEnd = 0;
+
+    private float currentDegree = 0;
+
+    private AnimationSet rotateAnimations;
+
     private static int num = 0;
+
+    private Bitmap bitmap = null;
+
+    private float scale = 1;
 
     /**
      * A new CustomImageView with context CONTEXT.
@@ -30,10 +55,11 @@ public class CustomImageView extends ImageView {
      */
     public CustomImageView(Context context) {
         super(context);
+
         num++;
         _selected = false;
         _delayedSelected = false;
-        this.setScaleType(ScaleType.CENTER_CROP);
+        this.setScaleType(ScaleType.FIT_XY);
         this.setAdjustViewBounds(true);
     }
 
@@ -42,12 +68,13 @@ public class CustomImageView extends ImageView {
         num++;
         _selected = selected;
         _delayedSelected = selected;
+        this.setScaleType(ScaleType.FIT_XY);
         this.setAdjustViewBounds(true);
     }
 
     @Override
     public void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+        // super.onDraw(canvas);
         if (this._delayedSelected) {
             Paint p = new Paint();
             p.setARGB(255, 255, 255, 255);
@@ -55,6 +82,11 @@ public class CustomImageView extends ImageView {
             p.setStyle(Paint.Style.STROKE);
             canvas.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1, p);
         }
+        canvas.save();
+        canvas.rotate(this.currentDegree, this.getWidth() / 2, this.getHeight() / 2);
+        canvas.scale(this.scale, this.scale);
+        canvas.drawBitmap(bitmap, new Matrix(), null);
+        canvas.restore();
     }
 
     /**
@@ -81,13 +113,19 @@ public class CustomImageView extends ImageView {
                 coords.x = (int) event.getRawX() + (this.getWidth() / 2);
                 coords.y = (int) event.getRawY() - 150;
                 this.layout(coords.x - (this.getWidth()), coords.y - (this.getHeight()), coords.x, coords.y);
+                if (this.getParent() instanceof CustomRelativeLayout) {
+                    ((CustomRelativeLayout) this.getParent()).isOverTrash(coords);
+                }
                 break;
             case MotionEvent.ACTION_UP:
                 if (this.getParent() instanceof CustomRelativeLayout) {
                     if (((CustomRelativeLayout) this.getParent()).outOfBounds(coords)) {
+                        ((CustomRelativeLayout) this.getParent()).isOverTrash(new Point((int) event.getRawX(), (int) event.getRawY()));
                         ((CustomRelativeLayout) this.getParent()).removeView(this);
+
                         return true;
                     }
+
                 }
                 _selected = false;
         }
@@ -108,20 +146,13 @@ public class CustomImageView extends ImageView {
      * @param amount
      */
     public void scaleX(double amount) {
-        this.removeSelected();
-        Matrix mat = new Matrix();
-        float amount2 = ((float) amount) / 10;
-        coords.x += this.getWidth() * amount2 / 2;
-        coords.y += this.getHeight() * amount2 / 2;
-        mat.postScale((float) (1.5f + amount2), (float) (1.5f + amount2));
-        this.setDrawingCacheEnabled(true);
-        Bitmap newBm = Bitmap.createBitmap(this.getDrawingCache(), 0, 0, this.getWidth(), this.getHeight(), mat, true);
-        this.setDrawingCacheEnabled(false);
-        Drawable newDraw = new BitmapDrawable(newBm);
-        this.setImageDrawable(newDraw);
-
-        this._delayedSelected = true;
-        this._selected = true;
+        if (amount > 0) {
+            scale += .1;
+            this.setLayoutParams(new RelativeLayout.LayoutParams((int) (this.getWidth() * 1.1), (int) (this.getHeight() * 1.1)));
+        } else if (amount < 0) {
+            scale -= .1;
+            this.setLayoutParams(new RelativeLayout.LayoutParams((int) (Math.ceil(this.getWidth() * .9001)), (int) (Math.ceil(this.getHeight() * .9001))));
+        }
         ((View) this.getParent()).invalidate();
     }
 
@@ -131,36 +162,10 @@ public class CustomImageView extends ImageView {
      * @param amount
      */
     public void rotateX(int amount) {
-        this.removeSelected();
-        this.setDrawingCacheEnabled(true);
-        Matrix mat = new Matrix();
-        amount *= 5;
-        amount = amount % 360;
-        if (amount < 0) {
-            amount += 360;
-        }
-        mat.postRotate(amount, getWidth() / 2, getHeight() / 2);
-
-        double w = getWidth();
-        double h = getHeight();
-        double sinTheta = Math.abs(Math.sin(amount * Math.PI / 180));
-        double cosTheta = Math.abs(Math.cos(amount * Math.PI / 180));
-        double widthcrop = -(w * Math.pow(sinTheta, 2) - h * cosTheta * sinTheta + h * (cosTheta - 1) * sinTheta - cosTheta * w * (cosTheta - 1))
-                / (2 * (Math.pow(cosTheta, 2) - Math.pow(sinTheta, 2)));
-        double heightcrop = -(-h * Math.pow(sinTheta, 2) + w * cosTheta * sinTheta - w * (cosTheta - 1) * sinTheta + cosTheta * h * (cosTheta - 1))
-                / (2d * (Math.pow(sinTheta, 2) - Math.pow(cosTheta, 2)));
-
-        Bitmap cropped = Bitmap.createBitmap(getDrawingCache(), (int) widthcrop, (int) heightcrop, (int) (w - 2d * widthcrop), (int) (h - 2d * heightcrop));
-        Bitmap newBm = Bitmap.createBitmap(cropped, 0, 0, (int) (w - 2d * widthcrop), (int) (h - 2d * heightcrop), mat, true);
-        Bitmap padded = newBm;
-        if (w - newBm.getWidth() > 0 && h - newBm.getHeight() > 0) {
-            padded = padBitmap(newBm, (int) (w - newBm.getWidth()), (int) (h - newBm.getHeight()));
-        }
-        this.setDrawingCacheEnabled(false);
-        this.setImageBitmap(padded);
-        this._delayedSelected = true;
-        this._selected = true;
+        this.currentDegree += amount;
+        currentDegree = currentDegree % 360;
         ((View) this.getParent()).invalidate();
+        return;
     }
 
     /**
@@ -191,5 +196,79 @@ public class CustomImageView extends ImageView {
             pixels[index] = Color.TRANSPARENT;
         }
         return Bitmap.createBitmap(pixels, newBm.getWidth() + 2 * widthcrop, newBm.getHeight() + 2 * heightcrop, Bitmap.Config.ARGB_8888);
+    }
+
+    @Override
+    public void onAnimationEnd(Animation animation) {
+        this.isRotating = false;
+        this.currentDegree = this.currentRotateEnd;
+
+        if (this.futureRotateEnd > 0) {
+
+            Log.e("Rotate", "Need to rotate more!");
+            this.currentDegree = currentRotateEnd;
+            Log.e("Current Degree", this.currentDegree + "");
+            rotateX((int) (futureRotateEnd));
+        } else {
+            this.setDrawingCacheEnabled(true);
+            Bitmap b = this.getDrawingCache();
+            Bitmap newBm = b.copy(b.getConfig(), true);
+            Dialog d = new Dialog(this.getContext());
+            ImageView v = new ImageView(getContext());
+            v.setImageBitmap(newBm);
+
+            d.addContentView(v, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+            d.show();
+            this.setDrawingCacheEnabled(false);
+            this.setImageBitmap(newBm);
+            Log.e("Rotate", "Done rotating " + currentDegree + " " + currentRotateEnd + " " + futureRotateEnd);
+
+            this.currentRotateEnd = 0;
+            this.futureRotateEnd = 0;
+            this.setAnimation(null);
+
+            // ((View) this.getParent()).invalidate();
+        }
+    }
+
+    @Override
+    public void onAnimationRepeat(Animation animation) {
+        // Nothing
+    }
+
+    @Override
+    public void onAnimationStart(Animation animation) {
+        Log.e("Rotating", "Starting rotate");
+        this.isRotating = true;
+
+    }
+
+    @Override
+    public void setImageBitmap(Bitmap b) {
+        super.setImageBitmap(b);
+        this.bitmap = b;
+        setDimensions();
+    }
+
+    @Override
+    public void setImageResource(int res) {
+        super.setImageResource(res);
+        this.bitmap = BitmapFactory.decodeResource(getResources(), res);
+        setDimensions();
+    }
+
+    @Override
+    public void setImageDrawable(Drawable d) {
+        super.setImageDrawable(d);
+        this.bitmap = Bitmap.createBitmap(d.getIntrinsicWidth(), d.getIntrinsicHeight(), Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        d.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        d.draw(canvas);
+        setDimensions();
+    }
+
+    private void setDimensions() {
+        this.width = bitmap.getWidth();
+        this.height = bitmap.getHeight();
     }
 }
